@@ -58,7 +58,7 @@ impl Date {
 impl Sub for Date {
     type Output = i32;
     fn sub(self, rhs: Self) -> Self::Output {
-        i32::try_from(rhs.julian).unwrap() - i32::try_from(self.julian).unwrap()
+        i32::try_from(self.julian).unwrap() - i32::try_from(rhs.julian).unwrap()
     }
 }
 

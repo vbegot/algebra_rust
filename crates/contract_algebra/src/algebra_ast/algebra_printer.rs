@@ -10,7 +10,8 @@ fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
         Contract::All(contracts) => {
             let mut res = String::new();
             for contract in contracts {
-                res = format!("{};\n", contract_to_string_aux(contract, indent));
+                res.push_str(&contract_to_string_aux(contract, indent));
+                res.push_str(";\n");
             }
             res.pop();
             res
