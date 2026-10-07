@@ -1,5 +1,5 @@
 [workspace]
-members = [
-    "crates/contract_algebra",
+members = ["crates/common",
+    "crates/contract_algebra","crates/common"
 ]
 resolver = "3"

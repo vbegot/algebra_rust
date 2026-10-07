@@ -1,5 +1,5 @@
-type Currency = String;
-type Date = f64;
+use common::currency::Currency;
+use common::date::Date;
 
 #[derive(Clone, Debug)]
 pub enum Contract {

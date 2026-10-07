@@ -1,15 +1,17 @@
+use common::currency;
+use common::date::Date;
 use contract_algebra::algebra_ast::{algebra_dsl::*, algebra_printer::*};
 
 fn main() {
-    let maturity = 2.;
+    let maturity = Date::new(2025, 01, 01).unwrap();
     let strike = 100.;
     let ul_name = String::from("Toto");
-    let currency = String::from("EUR");
+    let currency = currency::EUR;
 
     let ul = fixing(ul_name, maturity);
 
     let call_payoff = max(ul - obs(strike), obs(0.));
     let call_contract = flow(currency, maturity, call_payoff);
 
-    println!("{}", contract_to_string(&call_contract));
+    println!("Call contract:\n{}", contract_to_string(&call_contract));
 }

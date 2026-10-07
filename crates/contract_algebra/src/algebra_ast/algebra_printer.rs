@@ -22,8 +22,8 @@ fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
         } => format!(
             "{}flow({}, {}, {})",
             indent,
-            currency,
-            date,
+            currency.to_string(),
+            date.to_string(),
             observable_to_string(amount)
         ),
         Contract::IfContract {
@@ -48,7 +48,9 @@ fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
 pub fn observable_to_string(observable: &Observable) -> String {
     match observable {
         Observable::Constant(x) => format!("{}", x),
-        Observable::Fixing { name, fixing_date } => format!("{}({})", name, fixing_date),
+        Observable::Fixing { name, fixing_date } => {
+            format!("{}({})", name, fixing_date.to_string())
+        }
         Observable::BinopObservable { left, op, right } => {
             op.to_string(&observable_to_string(left), &observable_to_string(right))
         }
