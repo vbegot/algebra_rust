@@ -1,5 +1,9 @@
 use crate::{
-    algebra_ast::{BinaryCondOperator, Contract, ObsCondition, Observable},
+    algebra_ast::{
+        BinaryCondOperator,
+        Comparison::{Higher, Lower},
+        Contract, ObsCondition, Observable,
+    },
     lifecycle::LifecycleError::{MissingFixing, NoFixings},
 };
 use common::{currency::Currency, date::Date};
@@ -126,6 +130,15 @@ impl Managable for Observable {
     }
 }
 
+fn resolved_cond(b: bool) -> Result<(ObsCondition, Option<bool>), LifecycleError> {
+    let cond = ObsCondition::SimpleCondition {
+        left: Box::new(Observable::Constant(1.0)),
+        comp: if b { Higher } else { Lower },
+        right: Box::new(Observable::Constant(0.0)),
+    };
+    Ok((cond, Some(b)))
+}
+
 impl Managable for ObsCondition {
     type Output = (ObsCondition, Option<bool>);
 
@@ -152,34 +165,39 @@ impl Managable for ObsCondition {
                 Ok((cond, explicit))
             }
             ObsCondition::BinopCondition { left, op, right } => {
-                let (cond_left, explicit_left) = left.manage(ctx)?;
-                let (cond_right, explicit_right) = right.manage(ctx)?;
-                let cond = |cond_left: ObsCondition, cond_right: ObsCondition| -> ObsCondition {
-                    ObsCondition::BinopCondition {
-                        left: Box::new(cond_left),
-                        op: *op,
-                        right: Box::new(cond_right),
-                    }
-                };
-                match (explicit_left, op, explicit_right) {
-                    (Some(x), _, Some(y)) => Ok((cond(cond_left, cond_right), Some(op.eval(x, y)))),
+                let managed_left = left.manage(ctx);
+                let managed_right = right.manage(ctx);
+                match (&managed_left, op, &managed_right) {
+                    (Ok((_, Some(x))), _, Ok((_, Some(y)))) => resolved_cond(op.eval(*x, *y)),
 
-                    (Some(true), BinaryCondOperator::And, None)
-                    | (Some(false), BinaryCondOperator::Or, None) => Ok((cond_right, None)),
-                    (None, BinaryCondOperator::And, Some(true))
-                    | (None, BinaryCondOperator::Or, Some(false)) => Ok((cond_left, None)),
-
-                    (Some(false), BinaryCondOperator::And, None)
-                    | (None, BinaryCondOperator::And, Some(false)) => {
-                        Ok((cond(cond_left, cond_right), Some(false)))
+                    (Ok((_, Some(true))), BinaryCondOperator::And, _)
+                    | (Ok((_, Some(false))), BinaryCondOperator::Or, _) => {
+                        let (cond_right, _) = managed_right?;
+                        Ok((cond_right, None))
                     }
 
-                    (Some(true), BinaryCondOperator::Or, None)
-                    | (None, BinaryCondOperator::Or, Some(true)) => {
-                        Ok((cond(cond_left, cond_right), Some(true)))
+                    (_, BinaryCondOperator::And, Ok((_, Some(true))))
+                    | (_, BinaryCondOperator::Or, Ok((_, Some(false)))) => {
+                        let (cond_left, _) = managed_left?;
+                        Ok((cond_left, None))
                     }
 
-                    (None, _, None) => Ok((cond(cond_left, cond_right), None)),
+                    (Ok((_, Some(false))), BinaryCondOperator::And, _)
+                    | (_, BinaryCondOperator::And, Ok((_, Some(false)))) => resolved_cond(false),
+
+                    (Ok((_, Some(true))), BinaryCondOperator::Or, _)
+                    | (_, BinaryCondOperator::Or, Ok((_, Some(true)))) => resolved_cond(true),
+
+                    _ => {
+                        let (left, _) = managed_left?;
+                        let (right, _) = managed_right?;
+                        let cond = ObsCondition::BinopCondition {
+                            left: Box::new(left),
+                            op: *op,
+                            right: Box::new(right),
+                        };
+                        Ok((cond, None))
+                    }
                 }
             }
         }
