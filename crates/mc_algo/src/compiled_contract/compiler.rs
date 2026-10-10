@@ -1,4 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
+use std::error::Error;
+use std::fmt::{self, Display};
 
 use super::*;
 use common::{currency::Currency, date::Date};
@@ -14,6 +16,7 @@ pub struct CompilationCtx {
     as_of: Date,
     current_date: Date,
     fix_dates: BTreeSet<Date>,
+    fix_date_idx: BTreeMap<Date, usize>,
     underlying_idx: BTreeMap<String, usize>,
     flow_infos: Vec<FlowInfos>,
 }
@@ -21,13 +24,23 @@ pub struct CompilationCtx {
 impl CompilationCtx {
     pub fn new(contract: &Contract, as_of: &Date) -> Self {
         let fix_dates = get_contract_fix_dates(contract);
+        let mut fix_date_idx = BTreeMap::new();
+        fix_dates.iter().enumerate().for_each(|(idx, date)| {
+            fix_date_idx.insert(*date, idx);
+        });
         Self {
             as_of: *as_of,
             current_date: *as_of,
             fix_dates,
+            fix_date_idx,
             underlying_idx: BTreeMap::new(),
             flow_infos: Vec::new(),
         }
+    }
+
+    fn get_fix_idx(&self, date: &Date) -> Option<usize> {
+        let idx = self.fix_date_idx.get(date)?;
+        Some(*idx)
     }
 
     fn register_underlying(&mut self, underlying: &str) -> usize {
@@ -158,9 +171,27 @@ fn get_cond_fix_dates(condition: &ObsCondition) -> BTreeSet<Date> {
     }
 }
 
+#[derive(Debug)]
 pub enum CompilationError {
     NonMeasurableFlow { fix_date: Date, pay_date: Date },
+    BadContext,
 }
+
+impl Display for CompilationError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::NonMeasurableFlow { fix_date, pay_date } => write!(
+                f,
+                "Flow with pay date ({}) before fix date ({}).",
+                pay_date.to_string(),
+                fix_date.to_string()
+            ),
+            Self::BadContext => f.write_str("Bad Compilation Context"),
+        }
+    }
+}
+
+impl Error for CompilationError {}
 
 pub trait Compilable {
     type EvalOutput;
@@ -237,9 +268,26 @@ impl Compilable for Observable {
 
     fn compile(
         &self,
-        _ctx: &mut CompilationCtx,
+        ctx: &mut CompilationCtx,
     ) -> Result<Box<dyn Compiled<Output = Self::EvalOutput>>, CompilationError> {
-        panic!("Not Implemented")
+        match self {
+            Observable::Constant(x) => Ok(Box::new(CompiledConstant { value: *x })),
+            Observable::Fixing { name, fixing_date } => {
+                let ul_idx = ctx.register_underlying(name);
+                let date_idx = ctx.get_fix_idx(fixing_date);
+                match date_idx {
+                    None => Err(CompilationError::BadContext),
+                    Some(date_idx) => Ok(Box::new(CompiledFixing { ul_idx, date_idx })),
+                }
+            }
+            Observable::BinopObservable { left, op, right } => panic!("Not Implemented"),
+            Observable::UnopObservable { op, obs } => panic!("Not Implemented"),
+            Observable::IfObservable {
+                condition,
+                true_observable,
+                false_observable,
+            } => panic!("Not Implemented"),
+        }
     }
 }
 

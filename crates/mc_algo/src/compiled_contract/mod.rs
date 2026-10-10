@@ -76,7 +76,7 @@ impl Compiled for CompiledIf {
 
 // Compiled Observables
 
-struct CompiledConstantObservable {
+struct CompiledConstant {
     value: f64,
 }
 
@@ -96,7 +96,7 @@ struct CompiledUnopObservable {
     obs: CompiledFloat,
 }
 
-impl Compiled for CompiledConstantObservable {
+impl Compiled for CompiledConstant {
     type Output = f64;
 
     fn eval(&self, _ctx: &mut EvalContext) -> Self::Output {
