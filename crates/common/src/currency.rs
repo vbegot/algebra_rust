@@ -6,6 +6,7 @@ impl Currency {
         Self(cur)
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         String::from(self.0)
     }

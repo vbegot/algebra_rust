@@ -4,7 +4,7 @@ use crate::{
         Comparison::{Higher, Lower},
         Contract, ObsCondition, Observable,
     },
-    lifecycle::LifecycleError::{InvalidContract, MissingFixing, NoFixings},
+    lifecycle::LifecycleError::{MissingFixing, NoFixings},
 };
 use common::{currency::Currency, date::Date};
 use std::collections::BTreeMap;
@@ -221,7 +221,7 @@ impl Managable for Contract {
                     } = contract.manage(ctx)?;
                     paid_flows.into_iter().for_each(|f| flows.push(f));
                     match managed_contract {
-                        Contract::All(v) if v.len() == 0 => (),
+                        Contract::All(v) if v.is_empty() => (),
                         _ => managed_contracts.push(managed_contract),
                     }
                 }
@@ -274,7 +274,9 @@ impl Managable for Contract {
                     None => {
                         let managed_true = true_contract.manage(ctx)?;
                         let managed_false = false_contract.manage(ctx)?;
-                        if managed_true.paid_flows.len() > 0 || managed_false.paid_flows.len() > 0 {
+                        if !managed_true.paid_flows.is_empty()
+                            || !managed_false.paid_flows.is_empty()
+                        {
                             return Err(LifecycleError::InvalidContract);
                         }
                         let managed_contract = Contract::IfContract {

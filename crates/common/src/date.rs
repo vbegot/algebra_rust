@@ -23,7 +23,8 @@ impl Date {
             return Err(DateError::InvalidMonth);
         }
 
-        let leap_year = year % 4 == 0 && (year % 100 != 0 || year % 400 == 0);
+        let leap_year =
+            year.is_multiple_of(4) && (!year.is_multiple_of(100) || year.is_multiple_of(400));
         let days_in_month = match month {
             2 if leap_year => 29,
             2 => 28,
@@ -50,6 +51,7 @@ impl Date {
         })
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         format!("{}-{:02}-{:02}", self.year, self.month, self.day)
     }

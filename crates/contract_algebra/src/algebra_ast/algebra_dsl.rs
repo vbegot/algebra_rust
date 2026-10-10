@@ -134,7 +134,7 @@ const nothing: Contract = Contract::All(Vec::new());
 
 pub fn all(contracts: Vec<Contract>) -> Contract {
     if contracts.len() == 1 {
-        return contracts[0].clone();
+        contracts[0].clone()
     } else {
         Contract::All(contracts)
     }

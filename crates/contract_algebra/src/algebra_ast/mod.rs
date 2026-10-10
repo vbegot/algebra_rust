@@ -63,6 +63,7 @@ impl BinaryOperator {
         }
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self, x: &str, y: &str) -> String {
         match self {
             Self::Plus => format!("({} + {})", x, y),
@@ -132,6 +133,7 @@ impl UnaryOperator {
         }
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self, x: &str) -> String {
         match self {
             Self::Neg => format!("-({})-", x),
@@ -177,6 +179,7 @@ impl Comparison {
         }
     }
 
+    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self) -> String {
         match self {
             Self::Lower => String::from("<"),

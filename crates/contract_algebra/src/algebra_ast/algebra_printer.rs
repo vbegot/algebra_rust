@@ -6,7 +6,7 @@ pub fn contract_to_string(contract: &Contract) -> String {
 
 fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
     match contract {
-        Contract::All(c) if c.len() == 0 => format!("{}nothing", indent),
+        Contract::All(c) if c.is_empty() => format!("{}nothing", indent),
         Contract::All(contracts) => {
             let mut res = String::new();
             for contract in contracts {

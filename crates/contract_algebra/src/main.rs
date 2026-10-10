@@ -3,7 +3,7 @@ use common::date::Date;
 use contract_algebra::algebra_ast::{algebra_dsl::*, algebra_printer::*};
 
 fn main() {
-    let maturity = Date::new(2025, 01, 01).unwrap();
+    let maturity = Date::new(2025, 1, 1).unwrap();
     let strike = 100.;
     let ul_name = String::from("Toto");
     let currency = currency::EUR;
