@@ -39,7 +39,7 @@ pub enum Observable {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum BinaryOperator {
     Plus,
     Minus,
@@ -110,7 +110,7 @@ impl Observable {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum UnaryOperator {
     Neg,
     Log,
@@ -159,7 +159,7 @@ pub enum ObsCondition {
     },
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum Comparison {
     Lower,
     LowertOrEqual,
@@ -187,7 +187,7 @@ impl Comparison {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum BinaryCondOperator {
     And,
     Or,

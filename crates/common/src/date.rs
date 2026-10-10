@@ -1,6 +1,6 @@
 use std::ops::Sub;
 
-#[derive(Clone, Debug, Copy)]
+#[derive(Clone, Debug, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Date {
     julian: u32,
     year: u32,
