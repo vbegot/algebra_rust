@@ -1,4 +1,7 @@
+use std::fmt::Binary;
+
 use common::matrix::Matrix;
+use contract_algebra::algebra_ast::{BinaryOperator, UnaryOperator};
 
 type CompiledFloat = Box<dyn Compiled<Output = f64>>;
 type CompiledBool = Box<dyn Compiled<Output = bool>>;
@@ -17,6 +20,14 @@ impl<'a> EvalContext<'a> {
     }
 }
 
+pub trait Compiled {
+    type Output;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output;
+}
+
+// Compiled Contracts
+
 struct CompiledAll {
     contracts: Vec<CompiledFloat>,
 }
@@ -26,16 +37,11 @@ struct CompiledFlow {
     amount: CompiledFloat,
 }
 
-struct CompiledIfContract {
+// This struct can be shared between contracts and obs
+struct CompiledIf {
     condition: CompiledBool,
-    true_contract: CompiledFloat,
-    false_contract: CompiledFloat,
-}
-
-pub trait Compiled {
-    type Output;
-
-    fn eval(&self, ctx: &mut EvalContext) -> Self::Output;
+    compiled_true: CompiledFloat,
+    compiled_false: CompiledFloat,
 }
 
 impl Compiled for CompiledAll {
@@ -56,16 +62,56 @@ impl Compiled for CompiledFlow {
     }
 }
 
-impl Compiled for CompiledIfContract {
+impl Compiled for CompiledIf {
     type Output = f64;
 
     fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
         if self.condition.eval(ctx) {
-            self.true_contract.eval(ctx)
+            self.compiled_true.eval(ctx)
         } else {
-            self.false_contract.eval(ctx)
+            self.compiled_false.eval(ctx)
         }
     }
 }
+
+// Compiled Observables
+
+struct CompiledConstantObservable {
+    value: f64,
+}
+
+struct CompiledFixing {
+    ul_idx: usize,
+    date_idx: usize,
+}
+
+struct CompiledBinopObservable {
+    left: CompiledFloat,
+    op: BinaryOperator,
+    right: CompiledFloat,
+}
+
+struct CompiledUnopObservable {
+    op: UnaryOperator,
+    obs: CompiledFloat,
+}
+
+impl Compiled for CompiledConstantObservable {
+    type Output = f64;
+
+    fn eval(&self, _ctx: &mut EvalContext) -> Self::Output {
+        self.value
+    }
+}
+
+impl Compiled for CompiledFixing {
+    type Output = f64;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
+        ctx.trajectories[(self.date_idx, self.ul_idx)]
+    }
+}
+
+// Compiled Conditions
 
 pub mod compiler;
