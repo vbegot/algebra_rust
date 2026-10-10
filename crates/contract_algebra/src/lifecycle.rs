@@ -1,5 +1,5 @@
 use crate::{
-    algebra_ast::{Contract, ObsCondition, Observable},
+    algebra_ast::{BinaryCondOperator, Contract, ObsCondition, Observable},
     lifecycle::LifecycleError::{MissingFixing, NoFixings},
 };
 use common::{currency::Currency, date::Date};
@@ -77,9 +77,7 @@ impl Managable for Observable {
                 let (left_obs, left_resolved) = left.manage(ctx)?;
                 let (right_obs, right_resolved) = right.manage(ctx)?;
                 match (left_resolved, right_resolved) {
-                    (Some(explicit_left), Some(explicit_right)) => {
-                        resolved_obs(op.eval(explicit_left, explicit_right))
-                    }
+                    (Some(x), Some(y)) => resolved_obs(op.eval(x, y)),
                     _ => {
                         let obs = Observable::BinopObservable {
                             left: Box::new(left_obs),
@@ -131,8 +129,60 @@ impl Managable for Observable {
 impl Managable for ObsCondition {
     type Output = (ObsCondition, Option<bool>);
 
-    fn manage(&self, _ctx: &LifecycleContext) -> Result<Self::Output, LifecycleError> {
-        Err(LifecycleError::FunctionalError(String::from("TODO")))
+    fn manage(&self, ctx: &LifecycleContext) -> Result<Self::Output, LifecycleError> {
+        match self {
+            ObsCondition::SimpleCondition { left, comp, right } => {
+                let (obs_left, explicit_left) = left.manage(ctx)?;
+                let (obs_right, explicit_right) = right.manage(ctx)?;
+                let cond = ObsCondition::SimpleCondition {
+                    left: Box::new(obs_left),
+                    comp: *comp,
+                    right: Box::new(obs_right),
+                };
+                let explicit = match (explicit_left, explicit_right) {
+                    (Some(x), Some(y)) => Some(comp.eval(x, y)),
+                    _ => None,
+                };
+                Ok((cond, explicit))
+            }
+            ObsCondition::Not(cond) => {
+                let (cond, explicit) = cond.manage(ctx)?;
+                let cond = ObsCondition::Not(Box::new(cond));
+                let explicit = explicit.map(|x| !x);
+                Ok((cond, explicit))
+            }
+            ObsCondition::BinopCondition { left, op, right } => {
+                let (cond_left, explicit_left) = left.manage(ctx)?;
+                let (cond_right, explicit_right) = right.manage(ctx)?;
+                let cond = |cond_left: ObsCondition, cond_right: ObsCondition| -> ObsCondition {
+                    ObsCondition::BinopCondition {
+                        left: Box::new(cond_left),
+                        op: *op,
+                        right: Box::new(cond_right),
+                    }
+                };
+                match (explicit_left, op, explicit_right) {
+                    (Some(x), _, Some(y)) => Ok((cond(cond_left, cond_right), Some(op.eval(x, y)))),
+
+                    (Some(true), BinaryCondOperator::And, None)
+                    | (Some(false), BinaryCondOperator::Or, None) => Ok((cond_right, None)),
+                    (None, BinaryCondOperator::And, Some(true))
+                    | (None, BinaryCondOperator::Or, Some(false)) => Ok((cond_left, None)),
+
+                    (Some(false), BinaryCondOperator::And, None)
+                    | (None, BinaryCondOperator::And, Some(false)) => {
+                        Ok((cond(cond_left, cond_right), Some(false)))
+                    }
+
+                    (Some(true), BinaryCondOperator::Or, None)
+                    | (None, BinaryCondOperator::Or, Some(true)) => {
+                        Ok((cond(cond_left, cond_right), Some(true)))
+                    }
+
+                    (None, _, None) => Ok((cond(cond_left, cond_right), None)),
+                }
+            }
+        }
     }
 }
 
