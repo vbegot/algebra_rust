@@ -1,7 +1,7 @@
-use std::fmt::Binary;
-
 use common::matrix::Matrix;
-use contract_algebra::algebra_ast::{BinaryOperator, UnaryOperator};
+use contract_algebra::algebra_ast::{
+    BinaryCondOperator, BinaryOperator, Comparison, UnaryOperator,
+};
 
 type CompiledFloat = Box<dyn Compiled<Output = f64>>;
 type CompiledBool = Box<dyn Compiled<Output = bool>>;
@@ -112,6 +112,70 @@ impl Compiled for CompiledFixing {
     }
 }
 
+impl Compiled for CompiledBinopObservable {
+    type Output = f64;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
+        let left = self.left.eval(ctx);
+        let right = self.right.eval(ctx);
+        self.op.eval(left, right)
+    }
+}
+
+impl Compiled for CompiledUnopObservable {
+    type Output = f64;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
+        self.op.eval(self.obs.eval(ctx))
+    }
+}
+
 // Compiled Conditions
+
+struct CompiledSimpleCondition {
+    left: CompiledFloat,
+    comp: Comparison,
+    right: CompiledFloat,
+}
+
+// Temporary. Can be removed, the "not" can be statically resolved at compilation
+struct CompiledNot {
+    condition: CompiledBool,
+}
+
+struct CompiledBinopCondition {
+    left: CompiledBool,
+    op: BinaryCondOperator,
+    right: CompiledBool,
+}
+
+impl Compiled for CompiledSimpleCondition {
+    type Output = bool;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
+        let left = self.left.eval(ctx);
+        let right = self.right.eval(ctx);
+        self.comp.eval(left, right)
+    }
+}
+
+impl Compiled for CompiledNot {
+    type Output = bool;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
+        !self.condition.eval(ctx)
+    }
+}
+
+impl Compiled for CompiledBinopCondition {
+    type Output = bool;
+
+    fn eval(&self, ctx: &mut EvalContext) -> Self::Output {
+        match self.op {
+            BinaryCondOperator::And => self.left.eval(ctx) && self.right.eval(ctx),
+            BinaryCondOperator::Or => self.left.eval(ctx) || self.right.eval(ctx),
+        }
+    }
+}
 
 pub mod compiler;
