@@ -34,6 +34,7 @@ pub enum LifecycleError {
     NoFixings(String),           // No fixing at all for the given underlying
     MissingFixing(String, Date), // Missing the fixing date for the underlying
     FunctionalError(String),
+    InvalidContract,
 }
 
 impl Display for LifecycleError {
@@ -44,6 +45,7 @@ impl Display for LifecycleError {
                 write!(f, "Missing fixing for {name} on {}", date.to_string())
             }
             Self::FunctionalError(message) => f.write_str(message),
+            Self::InvalidContract => f.write_str("Invalid initial contract"),
         }
     }
 }
@@ -207,8 +209,86 @@ impl Managable for ObsCondition {
 impl Managable for Contract {
     type Output = LifecycleResult;
 
-    fn manage(&self, _ctx: &LifecycleContext) -> Result<Self::Output, LifecycleError> {
-        Err(LifecycleError::FunctionalError(String::from("TODO")))
+    fn manage(&self, ctx: &LifecycleContext) -> Result<Self::Output, LifecycleError> {
+        match self {
+            Self::All(contracts) => {
+                let mut managed_contracts = Vec::new();
+                let mut flows: Vec<PaidFlow> = Vec::new();
+                for contract in contracts {
+                    let LifecycleResult {
+                        paid_flows,
+                        managed_contract,
+                    } = contract.manage(ctx)?;
+                    paid_flows.into_iter().for_each(|f| flows.push(f));
+                    match managed_contract {
+                        Contract::All(v) if v.len() == 0 => (),
+                        _ => managed_contracts.push(managed_contract),
+                    }
+                }
+                let managed_contract = Contract::All(managed_contracts);
+                Ok(LifecycleResult {
+                    paid_flows: flows,
+                    managed_contract,
+                })
+            }
+            Self::Flow {
+                currency,
+                date,
+                amount,
+            } => {
+                let (managed_amount, explicit_amount) = amount.manage(ctx)?;
+                let default_managed_contract = || Contract::Flow {
+                    currency: currency.clone(),
+                    date: *date,
+                    amount: Box::new(managed_amount),
+                };
+                match explicit_amount {
+                    Some(0.) => Ok(LifecycleResult {
+                        paid_flows: Vec::new(),
+                        managed_contract: Contract::All(Vec::new()),
+                    }),
+                    Some(amount) if *date < ctx.as_of => Ok(LifecycleResult {
+                        paid_flows: vec![PaidFlow {
+                            pay_date: *date,
+                            currency: currency.clone(),
+                            amount,
+                        }],
+                        managed_contract: Contract::All(Vec::new()),
+                    }),
+                    _ => Ok(LifecycleResult {
+                        paid_flows: Vec::new(),
+                        managed_contract: default_managed_contract(),
+                    }),
+                }
+            }
+            Self::IfContract {
+                condition,
+                true_contract,
+                false_contract,
+            } => {
+                let (cond, cond_resolved) = condition.manage(ctx)?;
+                match cond_resolved {
+                    Some(true) => true_contract.manage(ctx),
+                    Some(false) => false_contract.manage(ctx),
+                    None => {
+                        let managed_true = true_contract.manage(ctx)?;
+                        let managed_false = false_contract.manage(ctx)?;
+                        if managed_true.paid_flows.len() > 0 || managed_false.paid_flows.len() > 0 {
+                            return Err(LifecycleError::InvalidContract);
+                        }
+                        let managed_contract = Contract::IfContract {
+                            condition: Box::new(cond),
+                            true_contract: Box::new(managed_true.managed_contract),
+                            false_contract: Box::new(managed_false.managed_contract),
+                        };
+                        Ok(LifecycleResult {
+                            paid_flows: Vec::new(),
+                            managed_contract,
+                        })
+                    }
+                }
+            }
+        }
     }
 }
 
