@@ -12,3 +12,11 @@ version = "0.1.0"
 dependencies = [
  "common",
 ]
+
+[[package]]
+name = "mc_algo"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "contract_algebra",
+]
