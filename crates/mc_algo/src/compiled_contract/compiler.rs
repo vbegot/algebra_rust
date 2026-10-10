@@ -1,13 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::*;
-use common::date::Date;
+use common::{currency::Currency, date::Date};
 use contract_algebra::algebra_ast::{Contract, ObsCondition, Observable};
 
 pub struct FlowInfos {
     pub fix_date: Date,
     pub pay_date: Date,
-    pub currency: String,
+    pub currency: Currency,
 }
 
 pub struct CompilationCtx {
@@ -42,7 +42,12 @@ impl CompilationCtx {
         }
     }
 
-    fn register_flow(&mut self, currency: &str, pay_date: &Date, amount: &Observable) -> usize {
+    fn register_flow(
+        &mut self,
+        currency: &Currency,
+        pay_date: &Date,
+        amount: &Observable,
+    ) -> usize {
         let amount_fix_date = get_obs_fix_dates(amount).into_iter().max();
         let fix_date = match amount_fix_date {
             Some(date) => self.current_date.max(date),
@@ -52,7 +57,7 @@ impl CompilationCtx {
         self.flow_infos.push(FlowInfos {
             fix_date,
             pay_date: *pay_date,
-            currency: currency.to_string(),
+            currency: *currency,
         });
         idx
     }
@@ -83,7 +88,7 @@ impl CompilationCtx {
                 idx,
                 fix_date.to_string(),
                 pay_date.to_string(),
-                currency
+                currency.to_string()
             )
         }
         println!("--------------------\n")
@@ -153,18 +158,89 @@ fn get_cond_fix_dates(condition: &ObsCondition) -> BTreeSet<Date> {
     }
 }
 
+pub enum CompilationError {}
+
 pub trait Compilable {
     type EvalOutput;
 
-    fn compile(&self, ctx: &mut CompilationCtx) -> Box<dyn Compiled<Output = Self::EvalOutput>>;
+    fn compile(
+        &self,
+        ctx: &mut CompilationCtx,
+    ) -> Result<Box<dyn Compiled<Output = Self::EvalOutput>>, CompilationError>;
 }
 
 impl Compilable for Contract {
     type EvalOutput = f64;
 
-    fn compile(&self, _ctx: &mut CompilationCtx) -> Box<dyn Compiled<Output = Self::EvalOutput>> {
-        Box::new(CompiledAll {
-            contracts: Vec::new(),
-        })
+    fn compile(
+        &self,
+        ctx: &mut CompilationCtx,
+    ) -> Result<Box<dyn Compiled<Output = Self::EvalOutput>>, CompilationError> {
+        match self {
+            Contract::All(contracts) => {
+                let mut compiled_contracts = Vec::new();
+                for contract in contracts.iter() {
+                    compiled_contracts.push(contract.compile(ctx)?);
+                }
+                Ok(Box::new(super::CompiledAll {
+                    contracts: compiled_contracts,
+                }))
+            }
+            Contract::Flow {
+                currency,
+                date,
+                amount,
+            } => {
+                let idx = ctx.register_flow(currency, date, amount);
+                let amount = amount.compile(ctx)?;
+                Ok(Box::new(super::CompiledFlow { idx, amount }))
+            }
+            Contract::IfContract {
+                condition,
+                true_contract,
+                false_contract,
+            } => {
+                // Explicit clone are note needed as prev_current_date implement Copy
+                // but it document that we explicitly want to copy the dates;
+                let prev_current_date = ctx.current_date.clone();
+                let condition_date = get_cond_fix_dates(condition).into_iter().max();
+                let current_date = match condition_date {
+                    Some(date) => date.max(ctx.current_date.clone()),
+                    None => ctx.current_date.clone(),
+                };
+                let condition = condition.compile(ctx)?;
+                ctx.current_date = current_date;
+                let true_contract = true_contract.compile(ctx);
+                let false_contract = false_contract.compile(ctx);
+                ctx.current_date = prev_current_date;
+                Ok(Box::new(CompiledIf {
+                    condition,
+                    compiled_true: true_contract?,
+                    compiled_false: false_contract?,
+                }))
+            }
+        }
+    }
+}
+
+impl Compilable for Observable {
+    type EvalOutput = f64;
+
+    fn compile(
+        &self,
+        _ctx: &mut CompilationCtx,
+    ) -> Result<Box<dyn Compiled<Output = Self::EvalOutput>>, CompilationError> {
+        panic!("Not Implemented")
+    }
+}
+
+impl Compilable for ObsCondition {
+    type EvalOutput = bool;
+
+    fn compile(
+        &self,
+        _ctx: &mut CompilationCtx,
+    ) -> Result<Box<dyn Compiled<Output = Self::EvalOutput>>, CompilationError> {
+        panic!("Not Implemented")
     }
 }
