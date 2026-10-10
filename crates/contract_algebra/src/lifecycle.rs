@@ -4,7 +4,7 @@ use crate::{
         Comparison::{Higher, Lower},
         Contract, ObsCondition, Observable,
     },
-    lifecycle::LifecycleError::{MissingFixing, NoFixings},
+    lifecycle::LifecycleError::{InvalidContract, MissingFixing, NoFixings},
 };
 use common::{currency::Currency, date::Date};
 use std::collections::BTreeMap;
@@ -255,6 +255,7 @@ impl Managable for Contract {
                         }],
                         managed_contract: Contract::All(Vec::new()),
                     }),
+                    None if *date < ctx.as_of => Err(LifecycleError::InvalidContract),
                     _ => Ok(LifecycleResult {
                         paid_flows: Vec::new(),
                         managed_contract: default_managed_contract(),
