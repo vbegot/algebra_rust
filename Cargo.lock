@@ -20,3 +20,12 @@ dependencies = [
  "common",
  "contract_algebra",
 ]
+
+[[package]]
+name = "pricer_cli"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "contract_algebra",
+ "mc_algo",
+]

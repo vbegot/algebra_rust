@@ -1,5 +1,5 @@
 [workspace]
 members = ["crates/common",
     "crates/contract_algebra","crates/common"
-, "crates/mc_algo"]
+, "crates/mc_algo", "crates/pricer_cli"]
 resolver = "3"
