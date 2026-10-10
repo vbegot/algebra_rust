@@ -158,7 +158,9 @@ fn get_cond_fix_dates(condition: &ObsCondition) -> BTreeSet<Date> {
     }
 }
 
-pub enum CompilationError {}
+pub enum CompilationError {
+    NonMeasurableFlow { fix_date: Date, pay_date: Date },
+}
 
 pub trait Compilable {
     type EvalOutput;
@@ -192,6 +194,13 @@ impl Compilable for Contract {
                 amount,
             } => {
                 let idx = ctx.register_flow(currency, date, amount);
+                let fix_date = ctx.flow_infos[idx].fix_date;
+                if (fix_date > *date) {
+                    return Err(CompilationError::NonMeasurableFlow {
+                        fix_date,
+                        pay_date: *date,
+                    });
+                }
                 let amount = amount.compile(ctx)?;
                 Ok(Box::new(super::CompiledFlow { idx, amount }))
             }
