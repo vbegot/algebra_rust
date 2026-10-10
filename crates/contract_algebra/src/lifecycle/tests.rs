@@ -1,5 +1,49 @@
 use super::*;
 
+mod conditions;
+mod contracts;
+mod observables;
+
+fn date(year: u32) -> Date {
+    Date::new(year, 1, 1).unwrap()
+}
+
+fn context() -> LifecycleContext {
+    LifecycleContext {
+        as_of: date(2026),
+        fixings: BTreeMap::new(),
+    }
+}
+
+fn fixing(name: &str, year: u32) -> Observable {
+    Observable::Fixing {
+        name: name.into(),
+        fixing_date: date(year),
+    }
+}
+
+fn add_fixing(ctx: &mut LifecycleContext, name: &str, year: u32, value: f64) {
+    ctx.fixings
+        .entry(name.into())
+        .or_default()
+        .insert(date(year), value);
+}
+
+fn assert_constant(obs: &Observable, expected: f64) {
+    match obs {
+        Observable::Constant(value) => assert_eq!(*value, expected),
+        other => panic!("expected Constant({expected}), got {other:?}"),
+    }
+}
+
+fn assert_fixing(obs: &Observable, name: &str, year: u32) {
+    assert!(
+        matches!(obs, Observable::Fixing { name: actual, fixing_date }
+        if actual == name && *fixing_date == date(year)),
+        "unexpected observable: {obs:?}"
+    );
+}
+
 #[derive(Clone, Copy, Debug)]
 enum State {
     False,
