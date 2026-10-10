@@ -211,3 +211,6 @@ impl Managable for Contract {
         Err(LifecycleError::FunctionalError(String::from("TODO")))
     }
 }
+
+#[cfg(test)]
+mod tests;
