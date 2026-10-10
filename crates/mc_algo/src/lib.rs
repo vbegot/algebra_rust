@@ -1,1 +1,1 @@
-pub mod compiler;
+pub mod compiled_contract;
