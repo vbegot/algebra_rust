@@ -129,8 +129,8 @@ pub fn not(x: ObsCondition) -> ObsCondition {
 
 // Contracts
 
-#[allow(non_upper_case_globals, dead_code)]
-const nothing: Contract = Contract::All(Vec::new());
+#[allow(non_upper_case_globals)]
+pub const nothing: Contract = Contract::All(Vec::new());
 
 pub fn all(contracts: Vec<Contract>) -> Contract {
     if contracts.len() == 1 {

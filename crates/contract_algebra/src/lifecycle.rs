@@ -12,7 +12,7 @@ use std::error::Error;
 use std::fmt::{self, Display};
 
 #[allow(dead_code)]
-struct PaidFlow {
+pub struct PaidFlow {
     pay_date: Date,
     currency: Currency,
     amount: f64,
@@ -23,9 +23,32 @@ pub struct LifecycleResult {
     managed_contract: Contract,
 }
 
+impl LifecycleResult {
+    pub fn get_paid_flows(&self) -> &[PaidFlow] {
+        &self.paid_flows
+    }
+
+    pub fn get_managed_contract(&self) -> &Contract {
+        &self.managed_contract
+    }
+}
+
 pub struct LifecycleContext {
     as_of: Date,
     fixings: BTreeMap<String, BTreeMap<Date, f64>>,
+}
+
+impl LifecycleContext {
+    pub fn new(as_of: &Date, fixings: BTreeMap<String, BTreeMap<Date, f64>>) -> Self {
+        Self {
+            as_of: *as_of,
+            fixings,
+        }
+    }
+
+    pub fn get_as_of(&self) -> &Date {
+        &self.as_of
+    }
 }
 
 #[derive(Debug)]

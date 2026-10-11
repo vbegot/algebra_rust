@@ -1,10 +1,13 @@
 use common::currency;
 use common::date::Date;
 use contract_algebra::algebra_ast::algebra_dsl::*;
+use contract_algebra::lifecycle::LifecycleContext;
 use mc_algo::compiled_contract::compiler::compile;
 use mc_algo::model_interface::MCModel;
 use mc_algo::pricing_algo::price_mc;
 use mc_models::simple_bs1d_model;
+use pricer_cli::models::ModelAndMethod;
+use std::collections::BTreeMap;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let as_of = Date::new(2024, 1, 1).unwrap();
@@ -27,7 +30,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut bs_model = simple_bs1d_model::SimpleBS1DModel::new(&bs_parameters)?;
 
-    let call_payoff = max(fixing(ul_name, maturity) - obs(strike), obs(0.));
+    let call_payoff = max(fixing(ul_name.clone(), maturity) - obs(strike), obs(0.));
     let call_contract = flow(currency, maturity, call_payoff);
 
     let compiled_call_contract = compile(&call_contract, &as_of)?;
@@ -55,5 +58,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         1.96 * price.stderr,
         price.time
     );
+
+    let mut mc_bs_model = pricer_cli::models::MCModelAndMethod {
+        nb_paths: 10_000,
+        model: bs_model,
+    };
+
+    let strike_date = Date::new(2020, 1, 1).unwrap();
+    let call_contract = flow(
+        currency,
+        maturity,
+        max(
+            fixing(ul_name.clone(), maturity) - fixing(ul_name.clone(), strike_date),
+            obs(0.),
+        ),
+    );
+
+    let mut fixings = BTreeMap::new();
+    let mut toto_fixings = BTreeMap::new();
+    toto_fixings.insert(strike_date, strike);
+    fixings.insert(ul_name.clone(), toto_fixings);
+    let lifecycle_context = LifecycleContext::new(&as_of, fixings);
+    let results2 = pricer_cli::models::price(&mut mc_bs_model, &call_contract, &lifecycle_context)?;
+    let price2 = mc_bs_model.get_price(&results2);
+
+    println!("Price 2 = {:.4}", price2);
+
     Ok(())
 }
