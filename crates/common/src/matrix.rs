@@ -25,11 +25,18 @@ impl Matrix {
         Some(i * self.n_cols + j)
     }
 
-    pub fn slice(&self, i: usize) -> &[f64] {
+    pub fn get_slice(&self, i: usize) -> &[f64] {
         assert!(i < self.n_rows, "{OOB_MSG}");
         let i0 = i * self.n_cols;
         let i1 = i0 + self.n_cols;
         &self.data[i0..i1]
+    }
+
+    pub fn get_mut_slice(&mut self, i: usize) -> &mut [f64] {
+        assert!(i < self.n_rows, "{OOB_MSG}");
+        let i0 = i * self.n_cols;
+        let i1 = i0 + self.n_cols;
+        &mut self.data[i0..i1]
     }
 
     pub fn get(&self, i: usize, j: usize) -> Option<&f64> {
