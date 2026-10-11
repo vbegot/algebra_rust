@@ -4,22 +4,25 @@ use crate::model_interface::MCModel;
 use crate::pricing_algo::MCError::CantInitializeModel;
 use common::matrix::Matrix;
 use std::error::Error;
+use std::time::Instant;
 
 pub struct MCResults {
     pub price: f64,
     pub variance: f64,
     pub stdev: f64,
     pub stderr: f64,
+    pub time: f64,
 }
 
 impl MCResults {
-    fn new(price: f64, m2: f64, nb_paths: usize) -> Self {
+    fn new(price: f64, m2: f64, nb_paths: usize, timer: &std::time::Instant) -> Self {
         let variance = m2 / (nb_paths - 1) as f64;
         MCResults {
             price,
             variance,
             stdev: variance.sqrt(),
             stderr: (variance / nb_paths as f64).sqrt(),
+            time: timer.elapsed().as_secs_f64() * 1_000.0,
         }
     }
 }
@@ -46,6 +49,7 @@ pub fn price_mc<Model: MCModel>(
     model: &mut Model,
     nb_paths: usize,
 ) -> Result<MCResults, MCError<Model::ModelError>> {
+    let timer = Instant::now();
     if nb_paths <= 1 {
         return Err(MCError::NotEnoughTrajectories);
     }
@@ -90,5 +94,5 @@ pub fn price_mc<Model: MCModel>(
         mean += delta / n;
         m2 += delta * (traj_price - mean);
     }
-    Ok(MCResults::new(mean, m2, nb_paths))
+    Ok(MCResults::new(mean, m2, nb_paths, &timer))
 }
