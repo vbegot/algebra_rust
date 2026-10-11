@@ -1,0 +1,9 @@
+[package]
+name = "pricer_cli"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+common = { path = "../common" }
+contract_algebra = { path = "../contract_algebra" }
+mc_algo = {path = "../mc_algo"}
