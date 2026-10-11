@@ -4,6 +4,7 @@ use common::currency::Currency;
 use mc_algo::model_interface::MCModel;
 use rand::{Rng, SeedableRng, rngs::StdRng};
 use rand_distr::{Distribution, StandardNormal};
+use std::error::Error;
 
 #[derive(Clone, Debug)]
 pub struct ModelParameters {
@@ -14,7 +15,16 @@ pub struct ModelParameters {
     pub currency: Currency,
 }
 
+#[derive(Debug)]
 pub enum ModelError {}
+
+impl std::fmt::Display for ModelError {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        Ok(())
+    }
+}
+
+impl Error for ModelError {}
 
 pub struct SimpleBS1DModel {
     parameters: ModelParameters,

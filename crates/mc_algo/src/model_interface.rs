@@ -3,7 +3,7 @@ use common::date::Date;
 
 pub trait MCModel {
     type ModelParameters;
-    type ModelError;
+    type ModelError: std::error::Error;
 
     fn new(parameters: &Self::ModelParameters) -> Result<Self, Self::ModelError>
     where

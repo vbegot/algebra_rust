@@ -1,9 +1,9 @@
-use common::matrix::Matrix;
-
 use crate::compiled_contract::EvalContext;
 use crate::compiled_contract::compiler::CompiledContract;
 use crate::model_interface::MCModel;
 use crate::pricing_algo::MCError::CantInitializeModel;
+use common::matrix::Matrix;
+use std::error::Error;
 
 pub struct MCResults {
     pub price: f64,
@@ -24,10 +24,22 @@ impl MCResults {
     }
 }
 
-pub enum MCError<ModelError> {
+#[derive(Debug)]
+pub enum MCError<ModelError: Error> {
     NotEnoughTrajectories,
     CantInitializeModel(ModelError),
 }
+
+impl<ModelError: Error> std::fmt::Display for MCError<ModelError> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NotEnoughTrajectories => f.write_str("Number of trajectories must be > 1"),
+            Self::CantInitializeModel(err) => write!(f, "Can't initialize model: {err}"),
+        }
+    }
+}
+
+impl<ModelError: Error> Error for MCError<ModelError> {}
 
 pub fn price_mc<Model: MCModel>(
     compiled_contract: &CompiledContract,
