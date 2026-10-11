@@ -15,7 +15,7 @@ pub trait MCModel {
         fix_dates: &[Date],
         underlyings: &[String],
         flow_infos: &[FlowInfos],
-    );
+    ) -> Option<Self::ModelError>;
 
     fn init_trajectory(&mut self);
 

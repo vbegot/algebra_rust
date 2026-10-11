@@ -23,18 +23,27 @@ impl MCResults {
     }
 }
 
+pub enum MCError<ModelError> {
+    NotEnoughTrajectories,
+    CantInitializeModel(ModelError),
+}
+
 pub fn price_mc<Model: MCModel>(
     compiled_contract: &CompiledContract,
     model: &mut Model,
     nb_paths: usize,
-) -> MCResults {
-    assert!(nb_paths > 1, "nb_paths must be strictly higher than 1");
+) -> Result<MCResults, MCError<Model::ModelError>> {
+    if nb_paths <= 1 {
+        return Err(MCError::NotEnoughTrajectories);
+    }
     let compilation_ctx = compiled_contract.get_compilation_context();
     let as_of = compilation_ctx.get_as_of();
     let fix_dates = compilation_ctx.get_fix_dates();
     let underlyings = compilation_ctx.get_underlyings();
     let flow_infos = compilation_ctx.get_flow_infos();
-    model.init(&as_of, &fix_dates, &underlyings, flow_infos);
+    if let Some(err) = model.init(&as_of, &fix_dates, &underlyings, flow_infos) {
+        return Err(MCError::CantInitializeModel(err));
+    }
     let nb_fix_dates = fix_dates.len();
     let nb_underlyings = underlyings.len();
     let nb_discounts = flow_infos.len();
@@ -68,5 +77,5 @@ pub fn price_mc<Model: MCModel>(
         mean += delta / n;
         m2 += delta * (traj_price - mean);
     }
-    MCResults::new(mean, m2, nb_paths)
+    Ok(MCResults::new(mean, m2, nb_paths))
 }
