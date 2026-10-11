@@ -53,7 +53,7 @@ fn call_compiles_and_evaluates_below_at_and_above_strike() {
     let compilation = compiled.get_compilation_context();
 
     assert_eq!(compilation.get_as_of(), date(2024));
-    assert_eq!(compilation.get_fix_dates(), vec![date(2025)]);
+    assert_eq!(compilation.get_fix_dates(), vec![date(2024), date(2025)]);
     assert_eq!(compilation.get_underlyings(), vec!["stock"]);
     let infos = compilation.get_flow_infos();
     assert_eq!(infos.len(), 1);
@@ -62,7 +62,10 @@ fn call_compiles_and_evaluates_below_at_and_above_strike() {
     assert_eq!(infos[0].currency.to_string(), "EUR");
 
     for (stock, expected) in [(80.0, 0.0), (100.0, 0.0), (120.0, 18.0)] {
-        let mut path = trajectory(compilation, &[(2025, "stock", stock)]);
+        let mut path = trajectory(
+            compilation,
+            &[(2024, "stock", 100.0), (2025, "stock", stock)],
+        );
         let mut discounts = [0.9];
         let mut ctx = EvalContext::new(&mut discounts, &mut path);
         // The same compiled object is reused with independent deterministic contexts.
@@ -75,10 +78,10 @@ fn fixed_flow_evaluates_without_any_fixing_or_underlying() {
     let contract = flow(EUR, date(2028), obs(-25.0));
     let compiled = compile(&contract, &date(2024)).unwrap();
     let compilation = compiled.get_compilation_context();
-    assert!(compilation.get_fix_dates().is_empty());
+    assert_eq!(compilation.get_fix_dates(), vec![date(2024)]);
     assert!(compilation.get_underlyings().is_empty());
     assert_eq!(compilation.get_flow_infos()[0].fix_date, date(2024));
-    let mut path = Matrix::new(0, 0);
+    let mut path = trajectory(compilation, &[]);
     let mut discounts = [0.8];
     assert_value(
         compiled.eval(&mut EvalContext::new(&mut discounts, &mut path)),
@@ -94,7 +97,10 @@ fn portfolio_uses_sorted_dates_and_registration_order_for_underlyings() {
     ]);
     let compiled = compile(&contract, &date(2024)).unwrap();
     let compilation = compiled.get_compilation_context();
-    assert_eq!(compilation.get_fix_dates(), vec![date(2025), date(2027)]);
+    assert_eq!(
+        compilation.get_fix_dates(),
+        vec![date(2024), date(2025), date(2027)]
+    );
     // Alphabetical map iteration must not reorder assigned column indices.
     assert_eq!(compilation.get_underlyings(), vec!["Z", "A"]);
     assert_eq!(compilation.get_flow_infos().len(), 2);
@@ -103,6 +109,8 @@ fn portfolio_uses_sorted_dates_and_registration_order_for_underlyings() {
     let mut path = trajectory(
         compilation,
         &[
+            (2024, "Z", 100.0),
+            (2024, "A", 200.0),
             (2025, "Z", 8.0),
             (2025, "A", 4.0),
             (2027, "Z", 30.0),
@@ -129,11 +137,14 @@ fn conditional_observable_compiles_boolean_and_numeric_expressions() {
     let contract = flow(EUR, date(2026), amount);
     let compiled = compile(&contract, &date(2024)).unwrap();
     let compilation = compiled.get_compilation_context();
-    assert_eq!(compilation.get_fix_dates(), vec![date(2025)]);
+    assert_eq!(compilation.get_fix_dates(), vec![date(2024), date(2025)]);
     assert_eq!(compilation.get_underlyings(), vec!["stock"]);
     assert_eq!(compilation.get_flow_infos()[0].fix_date, date(2025));
     for (stock, expected) in [(120.0, 10.0), (100.0, 0.0), (140.0, -2.5), (40.0, 12.5)] {
-        let mut path = trajectory(compilation, &[(2025, "stock", stock)]);
+        let mut path = trajectory(
+            compilation,
+            &[(2024, "stock", 100.0), (2025, "stock", stock)],
+        );
         let mut discounts = [0.5];
         assert_value(
             compiled.eval(&mut EvalContext::new(&mut discounts, &mut path)),
@@ -171,6 +182,7 @@ fn nested_contract_conditions_set_flow_dates_and_restore_neighbor_date() {
         let mut path = trajectory(
             compilation,
             &[
+                (2024, "stock", 100.0),
                 (2025, "stock", 40.0),
                 (2026, "stock", inner_value),
                 (2027, "stock", outer_value),
@@ -191,7 +203,9 @@ fn empty_contract_compiles_and_evaluates_to_zero() {
     let compiled = compile(&contract, &date(2024)).unwrap();
     let compilation = compiled.get_compilation_context();
     assert!(compilation.get_flow_infos().is_empty());
-    let mut path = Matrix::new(0, 0);
+    assert_eq!(compilation.get_fix_dates(), vec![date(2024)]);
+    assert!(compilation.get_underlyings().is_empty());
+    let mut path = trajectory(compilation, &[]);
     assert_value(
         compiled.eval(&mut EvalContext::new(&mut [], &mut path)),
         0.0,

@@ -23,7 +23,8 @@ pub struct CompilationCtx {
 
 impl CompilationCtx {
     pub fn new(contract: &Contract, as_of: &Date) -> Self {
-        let fix_dates = get_contract_fix_dates(contract);
+        let mut fix_dates = get_contract_fix_dates(contract);
+        fix_dates.insert(*as_of);
         let mut fix_date_idx = BTreeMap::new();
         fix_dates.iter().enumerate().for_each(|(idx, date)| {
             fix_date_idx.insert(*date, idx);
