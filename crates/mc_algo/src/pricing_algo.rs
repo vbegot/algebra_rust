@@ -3,6 +3,7 @@ use common::matrix::Matrix;
 use crate::compiled_contract::EvalContext;
 use crate::compiled_contract::compiler::CompiledContract;
 use crate::model_interface::MCModel;
+use crate::pricing_algo::MCError::CantInitializeModel;
 
 pub struct MCResults {
     pub price: f64,
@@ -41,9 +42,9 @@ pub fn price_mc<Model: MCModel>(
     let fix_dates = compilation_ctx.get_fix_dates();
     let underlyings = compilation_ctx.get_underlyings();
     let flow_infos = compilation_ctx.get_flow_infos();
-    if let Some(err) = model.init(&as_of, &fix_dates, &underlyings, flow_infos) {
-        return Err(MCError::CantInitializeModel(err));
-    }
+    model
+        .init(&as_of, &fix_dates, &underlyings, flow_infos)
+        .map_err(CantInitializeModel)?;
     let nb_fix_dates = fix_dates.len();
     let nb_underlyings = underlyings.len();
     let nb_discounts = flow_infos.len();
