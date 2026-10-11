@@ -197,6 +197,7 @@ fn get_cond_fix_dates(condition: &ObsCondition) -> BTreeSet<Date> {
 pub enum CompilationError {
     NonMeasurableFlow { fix_date: Date, pay_date: Date },
     BadContext,
+    FixingBeforeAsOf { as_of: Date, fix_date: Date },
 }
 
 impl Display for CompilationError {
@@ -209,6 +210,12 @@ impl Display for CompilationError {
                 fix_date.to_string()
             ),
             Self::BadContext => f.write_str("Bad Compilation Context"),
+            Self::FixingBeforeAsOf { as_of, fix_date } => write!(
+                f,
+                "Fix date {} before as of {}, please apply lifecycle",
+                fix_date.to_string(),
+                as_of.to_string()
+            ),
         }
     }
 }
@@ -295,6 +302,12 @@ impl Compilable for Observable {
         match self {
             Observable::Constant(x) => Ok(Box::new(CompiledConstant { value: *x })),
             Observable::Fixing { name, fixing_date } => {
+                if fixing_date < &ctx.as_of {
+                    return Err(CompilationError::FixingBeforeAsOf {
+                        as_of: ctx.as_of,
+                        fix_date: *fixing_date,
+                    });
+                }
                 let ul_idx = ctx.register_underlying(name);
                 let date_idx = ctx.get_fix_idx(fixing_date);
                 match date_idx {
