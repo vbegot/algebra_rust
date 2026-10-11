@@ -271,11 +271,12 @@ impl Compilable for Contract {
             } => {
                 // Explicit clone are note needed as prev_current_date implement Copy
                 // but it document that we explicitly want to copy the dates;
+                #[allow(clippy::clone_on_copy)]
                 let prev_current_date = ctx.current_date.clone();
                 let condition_date = get_cond_fix_dates(condition).into_iter().max();
                 let current_date = match condition_date {
-                    Some(date) => date.max(ctx.current_date.clone()),
-                    None => ctx.current_date.clone(),
+                    Some(date) => date.max(ctx.current_date),
+                    None => ctx.current_date,
                 };
                 let condition = condition.compile(ctx)?;
                 ctx.current_date = current_date;

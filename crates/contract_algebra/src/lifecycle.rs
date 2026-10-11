@@ -18,7 +18,6 @@ struct PaidFlow {
     amount: f64,
 }
 
-#[allow(dead_code)]
 pub struct LifecycleResult {
     paid_flows: Vec<PaidFlow>,
     managed_contract: Contract,
@@ -238,7 +237,7 @@ impl Managable for Contract {
             } => {
                 let (managed_amount, explicit_amount) = amount.manage(ctx)?;
                 let default_managed_contract = || Contract::Flow {
-                    currency: currency.clone(),
+                    currency: *currency,
                     date: *date,
                     amount: Box::new(managed_amount),
                 };
@@ -250,7 +249,7 @@ impl Managable for Contract {
                     Some(amount) if *date < ctx.as_of => Ok(LifecycleResult {
                         paid_flows: vec![PaidFlow {
                             pay_date: *date,
-                            currency: currency.clone(),
+                            currency: *currency,
                             amount,
                         }],
                         managed_contract: Contract::All(Vec::new()),

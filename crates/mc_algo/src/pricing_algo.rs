@@ -79,6 +79,7 @@ pub fn price_mc<Model: MCModel>(
     for path_idx in 0..nb_paths {
         model.init_trajectory();
         prev_date = 0.0;
+        #[allow(clippy::needless_range_loop)]
         for idx in 1..nb_fix_dates {
             let date = float_dates[idx];
             model.simulate(idx, prev_date, date);
