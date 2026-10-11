@@ -365,3 +365,27 @@ impl Compilable for ObsCondition {
         }
     }
 }
+
+pub struct CompiledContract {
+    contract: CompiledFloat,
+    compilation_context: CompilationCtx,
+}
+
+impl CompiledContract {
+    pub fn eval(&self, ctx: &mut EvalContext) -> f64 {
+        self.contract.eval(ctx)
+    }
+
+    pub fn get_compilation_context(&self) -> &CompilationCtx {
+        &self.compilation_context
+    }
+}
+
+pub fn compile(contract: &Contract, as_of: &Date) -> Result<CompiledContract, CompilationError> {
+    let mut compilation_context = CompilationCtx::new(contract, as_of);
+    let contract = contract.compile(&mut compilation_context)?;
+    Ok(CompiledContract {
+        contract,
+        compilation_context,
+    })
+}

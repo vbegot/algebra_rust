@@ -1,7 +1,7 @@
 use common::currency;
 use common::date::Date;
 use contract_algebra::algebra_ast::{algebra_dsl::*, algebra_printer::*};
-use mc_algo::compiled_contract::compiler::{self, Compilable};
+use mc_algo::compiled_contract::compiler::compile;
 
 fn main() {
     let as_of = Date::new(2024, 1, 1).unwrap();
@@ -15,11 +15,9 @@ fn main() {
     let call_payoff = max(ul - obs(strike), obs(0.));
     let call_contract = flow(currency, maturity, call_payoff);
 
-    let mut compilation_context = compiler::CompilationCtx::new(&call_contract, &as_of);
-    let _ = call_contract
-        .compile(&mut compilation_context)
-        .expect("contract compilation failed");
-    compilation_context.show();
+    let compiled_call_contract =
+        compile(&call_contract, &as_of).expect("contract compilation failed");
+    compiled_call_contract.get_compilation_context().show();
 
     println!("Call contract:\n{}", contract_to_string(&call_contract));
 }
