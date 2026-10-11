@@ -23,7 +23,8 @@ pub struct CompilationCtx {
 
 impl CompilationCtx {
     pub fn new(contract: &Contract, as_of: &Date) -> Self {
-        let fix_dates = get_contract_fix_dates(contract);
+        let mut fix_dates = get_contract_fix_dates(contract);
+        fix_dates.insert(*as_of);
         let mut fix_date_idx = BTreeMap::new();
         fix_dates.iter().enumerate().for_each(|(idx, date)| {
             fix_date_idx.insert(*date, idx);
@@ -214,7 +215,7 @@ impl Display for CompilationError {
 
 impl Error for CompilationError {}
 
-pub trait Compilable {
+trait Compilable {
     type EvalOutput;
 
     fn compile(
@@ -365,3 +366,30 @@ impl Compilable for ObsCondition {
         }
     }
 }
+
+pub struct CompiledContract {
+    contract: CompiledFloat,
+    compilation_context: CompilationCtx,
+}
+
+impl CompiledContract {
+    pub fn eval(&self, ctx: &mut EvalContext) -> f64 {
+        self.contract.eval(ctx)
+    }
+
+    pub fn get_compilation_context(&self) -> &CompilationCtx {
+        &self.compilation_context
+    }
+}
+
+pub fn compile(contract: &Contract, as_of: &Date) -> Result<CompiledContract, CompilationError> {
+    let mut compilation_context = CompilationCtx::new(contract, as_of);
+    let contract = contract.compile(&mut compilation_context)?;
+    Ok(CompiledContract {
+        contract,
+        compilation_context,
+    })
+}
+
+#[cfg(test)]
+mod tests;

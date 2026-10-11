@@ -8,15 +8,23 @@ type CompiledBool = Box<dyn Compiled<Output = bool>>;
 
 pub struct EvalContext<'a> {
     discounts: &'a mut [f64], // discount[i] represents N(0)/N(t) P(t, T) FX(t) for the i-th flow
-    trajectories: &'a Matrix,
+    trajectories: &'a mut Matrix,
 }
 
 impl<'a> EvalContext<'a> {
-    pub fn new(discounts: &'a mut [f64], trajectories: &'a Matrix) -> Self {
+    pub fn new(discounts: &'a mut [f64], trajectories: &'a mut Matrix) -> Self {
         Self {
             discounts,
             trajectories,
         }
+    }
+
+    pub(crate) fn get_discounts(&mut self) -> &mut [f64] {
+        self.discounts
+    }
+
+    pub(crate) fn get_trajectory_slice(&mut self, idx: usize) -> &mut [f64] {
+        self.trajectories.get_mut_slice(idx)
     }
 }
 
