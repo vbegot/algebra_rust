@@ -16,8 +16,10 @@ fn main() {
     let call_contract = flow(currency, maturity, call_payoff);
 
     let mut compilation_context = compiler::CompilationCtx::new(&call_contract, &as_of);
+    let _ = call_contract
+        .compile(&mut compilation_context)
+        .expect("contract compilation failed");
     compilation_context.show();
-    let _ = call_contract.compile(&mut compilation_context);
 
     println!("Call contract:\n{}", contract_to_string(&call_contract));
 }

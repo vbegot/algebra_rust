@@ -106,6 +106,27 @@ impl CompilationCtx {
         }
         println!("--------------------\n")
     }
+
+    pub fn get_as_of(&self) -> Date {
+        self.as_of
+    }
+
+    pub fn get_fix_dates(&self) -> Vec<Date> {
+        self.fix_dates.iter().copied().collect()
+    }
+
+    pub fn get_underlyings(&self) -> Vec<String> {
+        let mut res = Vec::new();
+        res.resize(self.underlying_idx.len(), String::from(""));
+        self.underlying_idx
+            .iter()
+            .for_each(|(ul, idx)| res[*idx] = ul.clone());
+        res
+    }
+
+    pub fn get_flow_infos(&self) -> &[FlowInfos] {
+        &self.flow_infos
+    }
 }
 
 fn get_contract_fix_dates(contract: &Contract) -> BTreeSet<Date> {
@@ -226,7 +247,7 @@ impl Compilable for Contract {
             } => {
                 let idx = ctx.register_flow(currency, date, amount);
                 let fix_date = ctx.flow_infos[idx].fix_date;
-                if (fix_date > *date) {
+                if fix_date > *date {
                     return Err(CompilationError::NonMeasurableFlow {
                         fix_date,
                         pay_date: *date,
@@ -280,13 +301,33 @@ impl Compilable for Observable {
                     Some(date_idx) => Ok(Box::new(CompiledFixing { ul_idx, date_idx })),
                 }
             }
-            Observable::BinopObservable { left, op, right } => panic!("Not Implemented"),
-            Observable::UnopObservable { op, obs } => panic!("Not Implemented"),
+            Observable::BinopObservable { left, op, right } => {
+                let left = left.compile(ctx)?;
+                let right = right.compile(ctx)?;
+                Ok(Box::new(CompiledBinopObservable {
+                    left,
+                    op: *op,
+                    right,
+                }))
+            }
+            Observable::UnopObservable { op, obs } => Ok(Box::new(CompiledUnopObservable {
+                op: *op,
+                obs: obs.compile(ctx)?,
+            })),
             Observable::IfObservable {
                 condition,
                 true_observable,
                 false_observable,
-            } => panic!("Not Implemented"),
+            } => {
+                let condition = condition.compile(ctx)?;
+                let compiled_true = true_observable.compile(ctx)?;
+                let compiled_false = false_observable.compile(ctx)?;
+                Ok(Box::new(CompiledIf {
+                    condition,
+                    compiled_true,
+                    compiled_false,
+                }))
+            }
         }
     }
 }
@@ -296,8 +337,31 @@ impl Compilable for ObsCondition {
 
     fn compile(
         &self,
-        _ctx: &mut CompilationCtx,
+        ctx: &mut CompilationCtx,
     ) -> Result<Box<dyn Compiled<Output = Self::EvalOutput>>, CompilationError> {
-        panic!("Not Implemented")
+        match self {
+            ObsCondition::SimpleCondition { left, comp, right } => {
+                let left = left.compile(ctx)?;
+                let right = right.compile(ctx)?;
+                Ok(Box::new(CompiledSimpleCondition {
+                    left,
+                    comp: *comp,
+                    right,
+                }))
+            }
+            ObsCondition::Not(cond) => {
+                let condition = cond.compile(ctx)?;
+                Ok(Box::new(CompiledNot { condition }))
+            }
+            ObsCondition::BinopCondition { left, op, right } => {
+                let left = left.compile(ctx)?;
+                let right = right.compile(ctx)?;
+                Ok(Box::new(CompiledBinopCondition {
+                    left,
+                    op: *op,
+                    right,
+                }))
+            }
+        }
     }
 }
