@@ -214,7 +214,7 @@ impl Display for CompilationError {
 
 impl Error for CompilationError {}
 
-pub trait Compilable {
+trait Compilable {
     type EvalOutput;
 
     fn compile(
@@ -389,3 +389,6 @@ pub fn compile(contract: &Contract, as_of: &Date) -> Result<CompiledContract, Co
         compilation_context,
     })
 }
+
+#[cfg(test)]
+mod tests;
