@@ -28,13 +28,10 @@ fn test_call() {
 
     let mut bs_model = simple_bs1d_model::SimpleBS1DModel::new(&bs_parameters).unwrap();
 
-    let ul = fixing(ul_name, maturity);
-
-    let call_payoff = max(ul - obs(strike), obs(0.));
+    let call_payoff = max(fixing(ul_name, maturity) - obs(strike), obs(0.));
     let call_contract = flow(currency, maturity, call_payoff);
 
-    let compiled_call_contract =
-        compile(&call_contract, &as_of).expect("contract compilation failed");
+    let compiled_call_contract = compile(&call_contract, &as_of).unwrap();
 
     let price = price_mc(&compiled_call_contract, &mut bs_model, 100_000).unwrap();
 
@@ -49,12 +46,6 @@ fn test_call() {
         dt,
         strike,
         common::black::CallPut::Call,
-    );
-
-    println!(
-        "MC Price = {} +/- {}, theo price = {theo_call}",
-        price.price,
-        1.96 * price.stderr
     );
 
     assert!((price.price - theo_call).abs() < price.stderr)

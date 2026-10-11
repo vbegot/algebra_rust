@@ -6,7 +6,7 @@ use mc_algo::model_interface::MCModel;
 use mc_algo::pricing_algo::price_mc;
 use mc_models::simple_bs1d_model;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let as_of = Date::new(2024, 1, 1).unwrap();
     let maturity = Date::new(2025, 1, 1).unwrap();
     let strike = 100.;
@@ -25,17 +25,16 @@ fn main() {
         currency,
     };
 
-    let mut bs_model = simple_bs1d_model::SimpleBS1DModel::new(&bs_parameters).unwrap();
+    let mut bs_model = simple_bs1d_model::SimpleBS1DModel::new(&bs_parameters)?;
 
-    let ul = fixing(ul_name, maturity);
-
-    let call_payoff = max(ul - obs(strike), obs(0.));
+    let call_payoff = max(fixing(ul_name, maturity) - obs(strike), obs(0.));
     let call_contract = flow(currency, maturity, call_payoff);
 
-    let compiled_call_contract =
-        compile(&call_contract, &as_of).expect("contract compilation failed");
+    let compiled_call_contract = compile(&call_contract, &as_of)?;
 
-    let price = price_mc(&compiled_call_contract, &mut bs_model, 1_000_000).unwrap();
+    compiled_call_contract.get_compilation_context().show();
+
+    let price = price_mc(&compiled_call_contract, &mut bs_model, 1_000_000)?;
 
     let dt = (maturity - as_of) as f64 / 365.;
     let zc = (-rate * dt).exp();
@@ -56,4 +55,5 @@ fn main() {
         1.96 * price.stderr,
         price.time
     );
+    Ok(())
 }
