@@ -1,0 +1,11 @@
+[package]
+name = "mc_models"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rand = "0.9.0"
+rand_distr = "0.5"
+common = { path = "../common" }
+contract_algebra = { path = "../contract_algebra" }
+mc_algo = {path = "../mc_algo"}
