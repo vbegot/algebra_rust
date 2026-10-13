@@ -64,7 +64,7 @@ impl Display for LifecycleError {
         match self {
             Self::NoFixings(name) => write!(f, "No fixings for {name}"),
             Self::MissingFixing(name, date) => {
-                write!(f, "Missing fixing for {name} on {}", date.to_string())
+                write!(f, "Missing fixing for {name} on {date}")
             }
             Self::FunctionalError(message) => f.write_str(message),
             Self::InvalidContract => f.write_str("Invalid initial contract"),

@@ -33,6 +33,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let call_payoff = max(fixing(ul_name.clone(), maturity) - obs(strike), obs(0.));
     let call_contract = flow(currency, maturity, call_payoff);
 
+    println!("Call contract: {call_contract}\n");
+
     let compiled_call_contract = compile(&call_contract, &as_of)?;
 
     compiled_call_contract.get_compilation_context().show();

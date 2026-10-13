@@ -30,12 +30,7 @@ impl std::fmt::Display for ModelError {
                 write!(f, "Expect {expected} underlying, found {found} in contract")
             }
             Self::BadCurrency { expected, found } => {
-                write!(
-                    f,
-                    "Expect {} currency, found {} in contract",
-                    expected.to_string(),
-                    found.to_string()
-                )
+                write!(f, "Expect {expected} currency, found {found} in contract")
             }
         }
     }

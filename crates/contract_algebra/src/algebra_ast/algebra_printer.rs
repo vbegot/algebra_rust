@@ -1,6 +1,6 @@
 use super::*;
 
-pub fn contract_to_string(contract: &Contract) -> String {
+fn contract_to_string(contract: &Contract) -> String {
     contract_to_string_aux(contract, "")
 }
 
@@ -23,8 +23,8 @@ fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
         } => format!(
             "{}flow({}, {}, {})",
             indent,
-            currency.to_string(),
-            date.to_string(),
+            currency,
+            date,
             observable_to_string(amount)
         ),
         Contract::IfContract {
@@ -46,11 +46,11 @@ fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
     }
 }
 
-pub fn observable_to_string(observable: &Observable) -> String {
+fn observable_to_string(observable: &Observable) -> String {
     match observable {
         Observable::Constant(x) => format!("{}", x),
         Observable::Fixing { name, fixing_date } => {
-            format!("{}({})", name, fixing_date.to_string())
+            format!("{}({})", name, fixing_date)
         }
         Observable::BinopObservable { left, op, right } => {
             op.to_string(&observable_to_string(left), &observable_to_string(right))
@@ -69,7 +69,7 @@ pub fn observable_to_string(observable: &Observable) -> String {
     }
 }
 
-pub fn condition_to_string(condition: &ObsCondition) -> String {
+fn condition_to_string(condition: &ObsCondition) -> String {
     match condition {
         ObsCondition::BinopCondition {
             left,
@@ -93,8 +93,26 @@ pub fn condition_to_string(condition: &ObsCondition) -> String {
         ObsCondition::SimpleCondition { left, comp, right } => format!(
             "{} {} {}",
             observable_to_string(left),
-            comp.to_string(),
+            comp,
             observable_to_string(right),
         ),
+    }
+}
+
+impl std::fmt::Display for Contract {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&contract_to_string(self))
+    }
+}
+
+impl std::fmt::Display for Observable {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&observable_to_string(self))
+    }
+}
+
+impl std::fmt::Display for ObsCondition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&condition_to_string(self))
     }
 }

@@ -50,10 +50,11 @@ impl Date {
             day,
         })
     }
+}
 
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
-        format!("{}-{:02}-{:02}", self.year, self.month, self.day)
+impl std::fmt::Display for Date {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}-{:02}-{:02}", self.year, self.month, self.day)
     }
 }
 

@@ -63,7 +63,6 @@ impl BinaryOperator {
         }
     }
 
-    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self, x: &str, y: &str) -> String {
         match self {
             Self::Plus => format!("({} + {})", x, y),
@@ -133,7 +132,6 @@ impl UnaryOperator {
         }
     }
 
-    #[allow(clippy::inherent_to_string)]
     pub fn to_string(&self, x: &str) -> String {
         match self {
             Self::Neg => format!("-({})-", x),
@@ -178,14 +176,15 @@ impl Comparison {
             Self::HigherOrEqual => x >= y,
         }
     }
+}
 
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
+impl std::fmt::Display for Comparison {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Lower => String::from("<"),
-            Self::LowertOrEqual => String::from("<="),
-            Self::Higher => String::from(">"),
-            Self::HigherOrEqual => String::from(">="),
+            Self::Lower => f.write_str("<"),
+            Self::LowertOrEqual => f.write_str("<="),
+            Self::Higher => f.write_str(">"),
+            Self::HigherOrEqual => f.write_str(">="),
         }
     }
 }
@@ -209,4 +208,4 @@ impl BinaryCondOperator {
 mod tests;
 
 pub mod algebra_dsl;
-pub mod algebra_printer;
+mod algebra_printer;

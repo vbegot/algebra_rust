@@ -5,10 +5,11 @@ impl Currency {
     pub fn new(cur: &'static str) -> Self {
         Self(cur)
     }
+}
 
-    #[allow(clippy::inherent_to_string)]
-    pub fn to_string(&self) -> String {
-        String::from(self.0)
+impl std::fmt::Display for Currency {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.0)
     }
 }
 

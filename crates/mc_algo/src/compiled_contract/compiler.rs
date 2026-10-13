@@ -78,14 +78,14 @@ impl CompilationCtx {
 
     pub fn show(&self) {
         println!("--------------------\nCompilation Context\n--------------------");
-        println!("  As Of: {}", self.as_of.to_string());
+        println!("  As Of: {}", self.as_of);
         println!("\n  Fix Dates:");
         for (idx, date) in self.fix_dates.iter().enumerate() {
-            println!("    {} => {};", idx, date.to_string());
+            println!("    {idx} => {date};");
         }
         println!("\n  Underlyings:");
         for (underlying, idx) in self.underlying_idx.iter() {
-            println!("    {} => {};", idx, underlying);
+            println!("    {idx} => {underlying};");
         }
         println!("\n  Flow Infos:");
         for (
@@ -97,13 +97,7 @@ impl CompilationCtx {
             },
         ) in self.flow_infos.iter().enumerate()
         {
-            println!(
-                "    {} => Fix: {}, Pay: {}, Currency: {}",
-                idx,
-                fix_date.to_string(),
-                pay_date.to_string(),
-                currency.to_string()
-            )
+            println!("    {idx} => Fix: {fix_date}, Pay: {pay_date}, Currency: {currency}")
         }
         println!("--------------------\n")
     }
@@ -205,16 +199,12 @@ impl Display for CompilationError {
         match self {
             Self::NonMeasurableFlow { fix_date, pay_date } => write!(
                 f,
-                "Flow with pay date ({}) before fix date ({}).",
-                pay_date.to_string(),
-                fix_date.to_string()
+                "Flow with pay date ({pay_date}) before fix date ({fix_date})."
             ),
             Self::BadContext => f.write_str("Bad Compilation Context"),
             Self::FixingBeforeAsOf { as_of, fix_date } => write!(
                 f,
-                "Fix date {} before as of {}, please apply lifecycle",
-                fix_date.to_string(),
-                as_of.to_string()
+                "Fix date {fix_date} before as of {as_of}, please apply lifecycle"
             ),
         }
     }
