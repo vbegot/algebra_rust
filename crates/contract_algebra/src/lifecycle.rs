@@ -3,6 +3,7 @@ use crate::{
         BinaryCondOperator,
         Comparison::{Higher, Lower},
         Contract, ObsCondition, Observable,
+        algebra_dsl::nothing,
     },
     lifecycle::LifecycleError::{MissingFixing, NoFixings},
 };
@@ -36,6 +37,7 @@ impl LifecycleResult {
 pub struct LifecycleContext {
     as_of: Date,
     fixings: BTreeMap<String, BTreeMap<Date, f64>>,
+    exercise_date: Option<Date>,
 }
 
 impl LifecycleContext {
@@ -43,6 +45,7 @@ impl LifecycleContext {
         Self {
             as_of: *as_of,
             fixings,
+            exercise_date: None,
         }
     }
 
@@ -228,6 +231,13 @@ impl Managable for ObsCondition {
     }
 }
 
+fn no_flow(managed_contract: Contract) -> Result<LifecycleResult, LifecycleError> {
+    Ok(LifecycleResult {
+        paid_flows: Vec::new(),
+        managed_contract,
+    })
+}
+
 impl Managable for Contract {
     type Output = LifecycleResult;
 
@@ -265,10 +275,7 @@ impl Managable for Contract {
                     amount: Box::new(managed_amount),
                 };
                 match explicit_amount {
-                    Some(0.) => Ok(LifecycleResult {
-                        paid_flows: Vec::new(),
-                        managed_contract: Contract::All(Vec::new()),
-                    }),
+                    Some(0.) => no_flow(Contract::All(Vec::new())),
                     Some(amount) if *date < ctx.as_of => Ok(LifecycleResult {
                         paid_flows: vec![PaidFlow {
                             pay_date: *date,
@@ -278,10 +285,7 @@ impl Managable for Contract {
                         managed_contract: Contract::All(Vec::new()),
                     }),
                     None if *date < ctx.as_of => Err(LifecycleError::InvalidContract),
-                    _ => Ok(LifecycleResult {
-                        paid_flows: Vec::new(),
-                        managed_contract: default_managed_contract(),
-                    }),
+                    _ => no_flow(default_managed_contract()),
                 }
             }
             Self::IfContract {
@@ -306,10 +310,29 @@ impl Managable for Contract {
                             true_contract: Box::new(managed_true.managed_contract),
                             false_contract: Box::new(managed_false.managed_contract),
                         };
-                        Ok(LifecycleResult {
-                            paid_flows: Vec::new(),
-                            managed_contract,
-                        })
+                        no_flow(managed_contract)
+                    }
+                }
+            }
+            Self::Option {
+                exercise_date,
+                given,
+                exercise,
+                no_exercise,
+            } => {
+                if *exercise_date > ctx.as_of {
+                    no_flow(Self::Option {
+                        exercise_date: *exercise_date,
+                        given: *given,
+                        exercise: Box::new(exercise.manage(ctx)?.managed_contract),
+                        no_exercise: Box::new(no_exercise.manage(ctx)?.managed_contract),
+                    })
+                } else {
+                    match ctx.exercise_date {
+                        Some(exercise_date) if exercise_date <= ctx.as_of => {
+                            no_flow(exercise.manage(ctx)?.managed_contract)
+                        }
+                        _ => no_flow(no_exercise.manage(ctx)?.managed_contract),
                     }
                 }
             }

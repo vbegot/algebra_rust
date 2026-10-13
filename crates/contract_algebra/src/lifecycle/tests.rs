@@ -12,6 +12,7 @@ fn context() -> LifecycleContext {
     LifecycleContext {
         as_of: date(2026),
         fixings: BTreeMap::new(),
+        exercise_date: None,
     }
 }
 
@@ -82,6 +83,7 @@ fn all_boolean_resolution_and_error_combinations() {
     let ctx = LifecycleContext {
         as_of: Date::new(2026, 1, 1).unwrap(),
         fixings: BTreeMap::new(),
+        exercise_date: None,
     };
     let states = [
         State::False,

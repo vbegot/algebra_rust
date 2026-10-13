@@ -43,6 +43,20 @@ fn contract_to_string_aux(contract: &Contract, indent: &str) -> String {
                 indent
             )
         }
+        Contract::Option {
+            exercise_date,
+            given,
+            exercise,
+            no_exercise,
+        } => {
+            let next_indent = format!("    {}", indent);
+            let prefix = if *given { "counterparty " } else { "" };
+            format!(
+                "{indent}{prefix}choose at {exercise_date} between:\n{}\nand:\n{}endchoose",
+                contract_to_string_aux(exercise, &next_indent),
+                contract_to_string_aux(no_exercise, &next_indent)
+            )
+        }
     }
 }
 

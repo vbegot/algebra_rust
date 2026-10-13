@@ -145,6 +145,17 @@ fn get_contract_fix_dates(contract: &Contract) -> BTreeSet<Date> {
             res.extend(get_contract_fix_dates(false_contract));
             res
         }
+        Contract::Option {
+            exercise_date,
+            exercise,
+            no_exercise,
+            ..
+        } => {
+            let mut res = get_contract_fix_dates(exercise);
+            res.extend(get_contract_fix_dates(no_exercise));
+            res.insert(*exercise_date);
+            res
+        }
     }
 }
 
@@ -279,6 +290,12 @@ impl Compilable for Contract {
                     compiled_false: false_contract?,
                 }))
             }
+            Contract::Option {
+                exercise_date,
+                given,
+                exercise,
+                no_exercise,
+            } => panic!("Not Implemented"),
         }
     }
 }

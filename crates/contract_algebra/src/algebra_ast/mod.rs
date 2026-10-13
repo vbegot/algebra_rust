@@ -14,6 +14,12 @@ pub enum Contract {
         true_contract: Box<Contract>,
         false_contract: Box<Contract>,
     },
+    Option {
+        exercise_date: Date,
+        given: bool,
+        exercise: Box<Contract>,
+        no_exercise: Box<Contract>,
+    },
 }
 
 #[derive(Clone, Debug)]
